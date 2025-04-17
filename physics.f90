@@ -69,7 +69,7 @@ end subroutine
 !***********************************************************************
 !***********************************************************************
 subroutine EvalSquaredVelIncrementsNormal()
-    ! compute the velocity increments squared in the three directions
+    ! Compute the velocity increments squared in the three directions
     ! these are normal to the chosen direction
     implicit none 
     integer(kind=prec):: ii,jj,ll,hhLef,hhRig
@@ -77,7 +77,7 @@ subroutine EvalSquaredVelIncrementsNormal()
     real(kind=prec):: deltuxLfwd,deltuxLbwd
 
     !....Compute velocity increments 
-    ! in streamwise (x) and spanwise direction (z)
+    ! in streamwise (x)
     do ll=0,Nzloc-1
       do jj=0,Nx-1
         do ii=0,Ny

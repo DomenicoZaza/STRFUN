@@ -91,6 +91,10 @@ allocate(uumax(1:Nsavings))
 allocate(nneven(0:Ny/2),nnodd(0:Ny/2-1))
 
 
+!....Grid Spacing in the wall-normal direction
+allocate(deltay(0:Ny-1))
+
+
 !..Velocity incrememts 
 allocate(deltux1(0:Ny,0:Nx-1,0:Nzloc-1))
 allocate(deltuy1(0:Ny,0:Nx-1,0:Nzloc-1))
@@ -98,6 +102,17 @@ allocate(deltuz1(0:Ny,0:Nx-1,0:Nzloc-1))
 allocate(deltux2(0:Ny,0:Nx-1,0:Nzloc-1))
 allocate(deltuy2(0:Ny,0:Nx-1,0:Nzloc-1))
 allocate(deltuz2(0:Ny,0:Nx-1,0:Nzloc-1))
+
+!....Spacing of the velocity increments in the wall-normal directions
+allocate(SpacY1Up(0:Ny))
+allocate(SpacY1Do(0:Ny))
+allocate(SpacY2Up(0:Ny))
+allocate(SpacY2Do(0:Ny))
+allocate(SpacY1rUp(0:Ny))
+allocate(SpacY1rDo(0:Ny))
+allocate(SpacY2rUp(0:Ny))
+allocate(SpacY2rDo(0:Ny))
+
 
 !!....Allocate Particles Variables
 !allocate(Part(1:PartInfo,1:Nplocmax))
@@ -199,6 +214,11 @@ deallocate(nneven,nnodd)
 !deallocate(PartIndices)
 !deallocate(Weights)
 
+!....Grid Spacing in the wall-normal direction
+deallocate(deltay)
+
+
+
 !..Velocity incrememts 
 deallocate(deltux1)
 deallocate(deltuy1)
@@ -208,310 +228,335 @@ deallocate(deltuy2)
 deallocate(deltuz2)
 
 
+!....Spacing of the velocity increments in the wall-normal directions
+deallocate(SpacY1Up)
+deallocate(SpacY1Do)
+deallocate(SpacY2Up)
+deallocate(SpacY2Do)
+deallocate(SpacY1rUp)
+deallocate(SpacY1rDo)
+deallocate(SpacY2rUp)
+deallocate(SpacY2rDo)
+
+
+
 
 end subroutine
 !***********************************************************************
 !***********************************************************************
 subroutine InitializeFlow()
-integer::ii,jj,ll
-!real(kind=prec),allocatable,dimension(:)::temp1
+  implicit none
+  integer::ii,jj,ll
+  !real(kind=prec),allocatable,dimension(:)::temp1
+  
+  !allocate(temp1(0:Ny-1))
+  !temp1=0.0d0
+  
+  
+  jj=1
+  do ii=Nmin,Nmax,Ipasso
+  IndSave(jj)=ii
+  jj=jj+1
+  end do
+  
+  
+  !....Some initial definitions
+  !...Domain Size
+  Lx=Lx_over_hpi*pi
+  Lz=Lz_over_hpi*pi
+  Lzloc=Lz/noprocs
+  Ly=2.0d0
+  
+  !...Spacing in x and z
+  deltax=Lx/dfloat(Nx)
+  deltaz=Lz/dfloat(Nz)
+  
+  
+  
+  !....Processors id
+  if(nid.eq.0)then
+  nidp1=nid+1
+  nidm1=noprocs-1
+  elseif(nid.eq.noprocs-1)then
+  nidp1=0
+  nidm1=noprocs-2
+  else
+  nidp1=nid+1
+  nidm1=nid-1
+  endif
+  
+  
+  !....wavenumber calculation
+  allocate(kz(0:Nz-1))
+  do ii=0,Nx/2
+  kx(ii)=dfloat(ii)
+  end do
+  do ii=1,Nx/2-1
+  kx(Nx-ii)=-dfloat(ii)
+  end do  
+  
+  do ii=0,Nz/2
+  kz(ii)=dfloat(ii)
+  end do
+  do ii=1,Nz/2-1
+  kz(Nz-ii)=-dfloat(ii)
+  end do  
+  
+  do ii=0,Nzloc-1
+  kzloc(ii)=kz(nid*Nzloc+ii)
+  end do
+  
+  deallocate(kz)
+  
+  !....dealiasing array calculation
+  do ll=0,Nzloc-1
+  do jj=0,Nx-1
+  do ii=0,Ny
+  dealiasing(ii,jj,ll)=.false.
+  end do
+  end do
+  end do
+  
+  do ll=0,Nzloc-1
+  do jj=0,Nx-1
+  do ii=0,Ny
+  if((dabs(kx(jj)/Nx)>(1.0d0/3.0d0)).OR.(dabs(kzloc(ll)/Nz)>(1.0d0/3.0d0))) then
+  dealiasing(ii,jj,ll)=.true.
+  end if
+  end do
+  end do
+  end do
+  
+  
+  call MPI_BARRIER(MPI_Comm_World,ierror) 
+  
+  
+  kx(Nx/2)=0.0d0
+  	
+  
+  do ii=0,Nzloc-1
+  if((nid*Nzloc+ii).eq.(Nz/2)) then
+  kzloc(ii)=0.0d0
+  end if
+  end do
+  
+  
+  !....Adapt the wavenumbers to the domain sizes
+  kx=kx*2.0d0*pi/Lx
+  kzloc=kzloc*2.0d0*pi/Lz
+  
+  
+  
+  do ll=0,Nzloc-1
+  do ii=0,Nx-1
+  do jj=0,Ny
+  ikkx(jj,ii,ll)=imu*kx(ii)
+  ikkz(jj,ii,ll)=imu*kzloc(ll)
+  end do
+  kkquad(ii,ll)=(kx(ii))**2+(kzloc(ll))**2
+  end do
+  end do
+  
+  
+  kkquadno0=kkquad
+  do ll=0,Nzloc-1
+  do jj=0,Nx-1
+  if(kkquadno0(jj,ll).eq.0.0d0)then
+  kkquadno0(jj,ll)=1.0d0
+  end if
+  end do
+  end do
+  
+  
+  allocate(z(0:Nz)) 
+  do ii=0,Nx
+  x(ii)=Lx*(ii*1.0d0)/(Nx)
+  end do	
+  do ii=0,Nz
+  z(ii)=Lz*(ii*1.0d0)/(Nz)
+  end do		
+  do ii=0,(Ny/2-1)
+  y(ii)=dcos(pi*ii/Ny)
+  y(Ny-ii)=-y(ii)
+  end do
+  y(Ny/2)=0.0d0
+  
+  
+  do ii=0,Ny
+  yp(ii)=(1.0d0-y(ii))*Re
+  end do
+  
+  do ii=0,Nzloc
+  zloc(ii)=z(nid*Nzloc+ii)
+  end do
+  
+  deallocate(z)
+  
+  do ii=0,Ny/2
+  nneven(ii)=ii*2
+  end do
+  do ii=0,Ny/2-1
+  nnodd(ii)=ii*2+1
+  end do
+  
+  
+  !....Chebyshev Differentiation Matrices calculation and diagonlization
+  
+  call ChebyshevDiffMatrixV4Peyret()
+  
+  ! !....Chebyshev-tau Differentiation Matrices calculation
+  ! call ChebyshevTauDiffMatrix()
+  
+  ! do ii=0,Ny
+  ! Tnp1(ii)=(1.0d0)**(ii)
+  ! Tnm1(ii)=(-1.0d0)**(ii)
+  ! end do
+  
+  
+  ! temp1=0.0d0
+  
+  ! do ii=0,Ny-1
+  ! temp1(ii)=-DCOS(ii*pi/Ny+pi/2.0d0/Ny)*DCOS(pi/2/Ny)
+  ! end do
+  
+  ! do ll=0,Nzloc-1
+  ! do jj=0,Nx-1
+  ! do ii=1,Ny-1
+  ! Volumes(ii,jj,ll)=(temp1(ii)-temp1(ii-1))*deltax*deltaz
+  ! end do
+  ! end do
+  ! end do
+  
+  ! Volumes(0,0:Nx-1,0:Nzloc-1)=deltax*deltaz*(1.0d0+temp1(0))
+  ! Volumes(Ny,0:Nx-1,0:Nzloc-1)=Volumes(0,0:Nx-1,0:Nzloc-1)
+  
+  
+  
+  ! deallocate(temp1)
+  
+  !Grid Spacing in the wall-normal direction
+  
+  do ii=0,Ny-1
+      deltay(ii)=DABS(y(ii+1)-y(ii))
+  end do
+  
+  
+  
+  !...Velocity increments 
+  SpacX1 = FLOOR(sep1/deltax)
+  SpacX2 = FLOOR(sep2/deltax)
+  SpacZ1 = FLOOR(sep1/deltaz)
+  SpacZ2 = FLOOR(sep2/deltaz)
+  
+  !...Remainder
+  SpacX1r = sep1/deltax - FLOOR(sep1/deltax)
+  SpacX2r = sep2/deltax - FLOOR(sep2/deltax)
+  SpacZ1r = sep1/deltaz - FLOOR(sep1/deltaz)
+  SpacZ2r = sep2/deltaz - FLOOR(sep2/deltaz)
+  
+  
+  
+  do ii=0,Ny-1
+    
+  end do
 
-!allocate(temp1(0:Ny-1))
-!temp1=0.0d0
 
 
-jj=1
-do ii=Nmin,Nmax,Ipasso
-IndSave(jj)=ii
-jj=jj+1
-end do
 
-
-!....Some initial definitions
-!...Domain Size
-Lx=Lx_over_hpi*pi
-Lz=Lz_over_hpi*pi
-Lzloc=Lz/noprocs
-Ly=2.0d0
-
-!...Spacing in x and z
-deltax=Lx/dfloat(Nx)
-deltaz=Lz/dfloat(Nz)
-
-
-
-!....Processors id
-if(nid.eq.0)then
-nidp1=nid+1
-nidm1=noprocs-1
-elseif(nid.eq.noprocs-1)then
-nidp1=0
-nidm1=noprocs-2
-else
-nidp1=nid+1
-nidm1=nid-1
-endif
-
-
-!....wavenumber calculation
-allocate(kz(0:Nz-1))
-do ii=0,Nx/2
-kx(ii)=dfloat(ii)
-end do
-do ii=1,Nx/2-1
-kx(Nx-ii)=-dfloat(ii)
-end do  
-
-do ii=0,Nz/2
-kz(ii)=dfloat(ii)
-end do
-do ii=1,Nz/2-1
-kz(Nz-ii)=-dfloat(ii)
-end do  
-
-do ii=0,Nzloc-1
-kzloc(ii)=kz(nid*Nzloc+ii)
-end do
-
-deallocate(kz)
-
-!....dealiasing array calculation
-do ll=0,Nzloc-1
-do jj=0,Nx-1
-do ii=0,Ny
-dealiasing(ii,jj,ll)=.false.
-end do
-end do
-end do
-
-do ll=0,Nzloc-1
-do jj=0,Nx-1
-do ii=0,Ny
-if((dabs(kx(jj)/Nx)>(1.0d0/3.0d0)).OR.(dabs(kzloc(ll)/Nz)>(1.0d0/3.0d0))) then
-dealiasing(ii,jj,ll)=.true.
-end if
-end do
-end do
-end do
-
-
-call MPI_BARRIER(MPI_Comm_World,ierror) 
-
-
-kx(Nx/2)=0.0d0
-	
-
-do ii=0,Nzloc-1
-if((nid*Nzloc+ii).eq.(Nz/2)) then
-kzloc(ii)=0.0d0
-end if
-end do
-
-
-!....Adapt the wavenumbers to the domain sizes
-kx=kx*2.0d0*pi/Lx
-kzloc=kzloc*2.0d0*pi/Lz
-
-
-
-do ll=0,Nzloc-1
-do ii=0,Nx-1
-do jj=0,Ny
-ikkx(jj,ii,ll)=imu*kx(ii)
-ikkz(jj,ii,ll)=imu*kzloc(ll)
-end do
-kkquad(ii,ll)=(kx(ii))**2+(kzloc(ll))**2
-end do
-end do
-
-
-kkquadno0=kkquad
-do ll=0,Nzloc-1
-do jj=0,Nx-1
-if(kkquadno0(jj,ll).eq.0.0d0)then
-kkquadno0(jj,ll)=1.0d0
-end if
-end do
-end do
-
-
-allocate(z(0:Nz)) 
-do ii=0,Nx
-x(ii)=Lx*(ii*1.0d0)/(Nx)
-end do	
-do ii=0,Nz
-z(ii)=Lz*(ii*1.0d0)/(Nz)
-end do		
-do ii=0,(Ny/2-1)
-y(ii)=dcos(pi*ii/Ny)
-y(Ny-ii)=-y(ii)
-end do
-y(Ny/2)=0.0d0
-
-
-do ii=0,Ny
-yp(ii)=(1.0d0-y(ii))*Re
-end do
-
-do ii=0,Nzloc
-zloc(ii)=z(nid*Nzloc+ii)
-end do
-
-deallocate(z)
-
-do ii=0,Ny/2
-nneven(ii)=ii*2
-end do
-do ii=0,Ny/2-1
-nnodd(ii)=ii*2+1
-end do
-
-
-!....Chebyshev Differentiation Matrices calculation and diagonlization
-
-call ChebyshevDiffMatrixV4Peyret()
-
-! !....Chebyshev-tau Differentiation Matrices calculation
-! call ChebyshevTauDiffMatrix()
-
-! do ii=0,Ny
-! Tnp1(ii)=(1.0d0)**(ii)
-! Tnm1(ii)=(-1.0d0)**(ii)
-! end do
-
-
-! temp1=0.0d0
-
-! do ii=0,Ny-1
-! temp1(ii)=-DCOS(ii*pi/Ny+pi/2.0d0/Ny)*DCOS(pi/2/Ny)
-! end do
-
-! do ll=0,Nzloc-1
-! do jj=0,Nx-1
-! do ii=1,Ny-1
-! Volumes(ii,jj,ll)=(temp1(ii)-temp1(ii-1))*deltax*deltaz
-! end do
-! end do
-! end do
-
-! Volumes(0,0:Nx-1,0:Nzloc-1)=deltax*deltaz*(1.0d0+temp1(0))
-! Volumes(Ny,0:Nx-1,0:Nzloc-1)=Volumes(0,0:Nx-1,0:Nzloc-1)
-
-
-
-! deallocate(temp1)
-
-
-
-!...Velocity increments 
-SpacX1 = FLOOR(sep1/deltax)
-SpacX2 = FLOOR(sep2/deltax)
-SpacZ1 = FLOOR(sep1/deltaz)
-SpacZ2 = FLOOR(sep2/deltaz)
-
-!...Remainder
-SpacX1r = sep1/deltax - FLOOR(sep1/deltax)
-SpacX2r = sep2/deltax - FLOOR(sep2/deltax)
-SpacZ1r = sep1/deltaz - FLOOR(sep1/deltaz)
-SpacZ2r = sep2/deltaz - FLOOR(sep2/deltaz)
-
-
-end subroutine
-!***********************************************************************
-!***********************************************************************
-
-!***********************************************************************
-!***********************************************************************
-subroutine ChebyshevDiffMatrixV4Peyret()
-integer::ii,jj
-real(kind=prec),allocatable,dimension(:)::temp
-
-allocate(temp(0:Ny))
-
-
-!....First order derivative
-D=0.0d0
-
-!....Off-Diagonal Entries
-do ii=1,Ny-1
-do jj=1,Ny-1
-if (ii.ne.jj)then
-D(ii,jj)=((-1.0d0)**(ii+jj))/(y(ii)-y(jj))
-end if 
-end do
-end do
-
-do jj=1,Ny-1
-D(0,jj)=2.0d0*((-1.0d0)**(jj))/(1-y(jj))
-end do
-
-D(0,Ny)=0.5d0*(-1.0d0)**(Ny)
-
-do ii=1,Ny-1
-D(ii,Ny)=0.5d0*((-1.0d0)**(Ny+ii))/(1+y(ii))
-end do
-
-do ii=1,Ny-1
-D(ii,0)=-0.5d0*((-1.0d0)**(ii))/(1-y(ii))
-end do
-
-D(Ny,0)=-D(0,Ny)
-
-do jj=1,Ny-1
-D(Ny,jj)=-2.0d0*((-1.0d0)**(Ny+jj))/(1+y(jj))
-end do
-
-!....Diagonal Entries
-do jj=0,Ny
-temp=0.0d0
-do ii=0,Ny
-if(ii.ne.jj)then
-temp(ii)=D(jj,ii)
-end if
-end do
-
-D(jj,jj)=-sum(temp)
-end do
-
-!....Second order derivative
-D2=0.0d0
-
-D2=matmul(D,D)
-
-!....Removing Diagonal Entries
-do jj=0,Ny
-D2(jj,jj)=0.0d0
-end do
-
-!....Diagonal Entries
-do jj=0,Ny
-temp=0.0d0
-do ii=0,Ny
-if(ii.ne.jj)then
-temp(ii)=D2(jj,ii)
-end if
-end do
-
-D2(jj,jj)=-sum(temp)
-end do
-
-
-
-do ii=1,Ny-1
-do jj=1,Ny-1
-D2tilde(jj,ii)=D2(jj,ii)	
-end do
-end do
-
-
-!....Matrix Diagonalization
-!Remember: MatrixDiagonalization(Eigenv,Pmat,PmatInv,Matrice,NN)
-call MatrixDiagonalization(Lambda,Qmat,QmatInv,D2tilde,Ny-1)
-
-	
-deallocate(temp)
 
 return
+end subroutine
+!***********************************************************************
+subroutine ChebyshevDiffMatrixV4Peyret()
+  integer::ii,jj
+  real(kind=prec),allocatable,dimension(:)::temp
+  
+  allocate(temp(0:Ny))
+  
+  
+  !....First order derivative
+  D=0.0d0
+  
+  !....Off-Diagonal Entries
+  do ii=1,Ny-1
+  do jj=1,Ny-1
+  if (ii.ne.jj)then
+  D(ii,jj)=((-1.0d0)**(ii+jj))/(y(ii)-y(jj))
+  end if 
+  end do
+  end do
+  
+  do jj=1,Ny-1
+  D(0,jj)=2.0d0*((-1.0d0)**(jj))/(1-y(jj))
+  end do
+  
+  D(0,Ny)=0.5d0*(-1.0d0)**(Ny)
+  
+  do ii=1,Ny-1
+  D(ii,Ny)=0.5d0*((-1.0d0)**(Ny+ii))/(1+y(ii))
+  end do
+  
+  do ii=1,Ny-1
+  D(ii,0)=-0.5d0*((-1.0d0)**(ii))/(1-y(ii))
+  end do
+  
+  D(Ny,0)=-D(0,Ny)
+  
+  do jj=1,Ny-1
+  D(Ny,jj)=-2.0d0*((-1.0d0)**(Ny+jj))/(1+y(jj))
+  end do
+  
+  !....Diagonal Entries
+  do jj=0,Ny
+  temp=0.0d0
+  do ii=0,Ny
+  if(ii.ne.jj)then
+  temp(ii)=D(jj,ii)
+  end if
+  end do
+  
+  D(jj,jj)=-sum(temp)
+  end do
+  
+  !....Second order derivative
+  D2=0.0d0
+  
+  D2=matmul(D,D)
+  
+  !....Removing Diagonal Entries
+  do jj=0,Ny
+  D2(jj,jj)=0.0d0
+  end do
+  
+  !....Diagonal Entries
+  do jj=0,Ny
+  temp=0.0d0
+  do ii=0,Ny
+  if(ii.ne.jj)then
+  temp(ii)=D2(jj,ii)
+  end if
+  end do
+  
+  D2(jj,jj)=-sum(temp)
+  end do
+  
+  
+  
+  do ii=1,Ny-1
+  do jj=1,Ny-1
+  D2tilde(jj,ii)=D2(jj,ii)	
+  end do
+  end do
+  
+  
+  !....Matrix Diagonalization
+  !Remember: MatrixDiagonalization(Eigenv,Pmat,PmatInv,Matrice,NN)
+  call MatrixDiagonalization(Lambda,Qmat,QmatInv,D2tilde,Ny-1)
+  
+  	
+  deallocate(temp)
+  
+  return
 end subroutine
 !***********************************************************************
 !***********************************************************************

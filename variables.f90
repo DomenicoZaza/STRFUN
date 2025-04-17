@@ -54,6 +54,7 @@ integer(kind=prec)::Ny,Nx,Nz,Nzloc
 real(kind=prec)::Lx_over_hpi,Lz_over_hpi
 real(kind=prec)::Lx,Lz,Ly,Lzloc
 real(kind=prec)::deltax,deltaz 
+real(kind=prec),allocatable,dimension(:)::deltay
 
 ! !....Number of grid points
 ! integer(kind=prec)::Ny,Nx,Nz,Nzloc
@@ -146,6 +147,18 @@ real(kind=prec):: SpacX1r
 real(kind=prec):: SpacX2r
 real(kind=prec):: SpacZ1r
 real(kind=prec):: SpacZ2r
+
+!....In the wall normal direction, due to the stretching these spacings are varying
+integer(kind=prec),allocatable,dimension(:):: SpacY1Up
+integer(kind=prec),allocatable,dimension(:):: SpacY1Do
+integer(kind=prec),allocatable,dimension(:):: SpacY2Up
+integer(kind=prec),allocatable,dimension(:):: SpacY2Do
+real(kind=prec),allocatable,dimension(:):: SpacY1rUp
+real(kind=prec),allocatable,dimension(:):: SpacY1rDo
+real(kind=prec),allocatable,dimension(:):: SpacY2rUp
+real(kind=prec),allocatable,dimension(:):: SpacY2rDo
+
+
 
 
 end module parameters
