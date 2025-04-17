@@ -113,6 +113,13 @@ allocate(SpacY1rDo(0:Ny))
 allocate(SpacY2rUp(0:Ny))
 allocate(SpacY2rDo(0:Ny))
 
+allocate(InDom1Up(0:Ny))
+allocate(InDom1Do(0:Ny))
+allocate(InDom2Up(0:Ny))
+allocate(InDom2Do(0:Ny))
+
+allocate(InDom1(0:Ny))
+allocate(InDom2(0:Ny))
 
 !!....Allocate Particles Variables
 !allocate(Part(1:PartInfo,1:Nplocmax))
@@ -239,7 +246,13 @@ deallocate(SpacY2rUp)
 deallocate(SpacY2rDo)
 
 
+deallocate(InDom1Up)
+deallocate(InDom1Do)
+deallocate(InDom2Up)
+deallocate(InDom2Do)
 
+deallocate(InDom1)
+deallocate(InDom2)
 
 end subroutine
 !***********************************************************************
@@ -247,11 +260,8 @@ end subroutine
 subroutine InitializeFlow()
   implicit none
   integer::ii,jj,ll
-  !real(kind=prec),allocatable,dimension(:)::temp1
-  
-  !allocate(temp1(0:Ny-1))
-  !temp1=0.0d0
-  
+  real(kind=prec)::y_target1,y_target2
+
   
   jj=1
   do ii=Nmin,Nmax,Ipasso
@@ -435,13 +445,11 @@ subroutine InitializeFlow()
   ! deallocate(temp1)
   
   !Grid Spacing in the wall-normal direction
-  
   do ii=0,Ny-1
       deltay(ii)=DABS(y(ii+1)-y(ii))
   end do
   
-  
-  
+
   !...Velocity increments 
   SpacX1 = FLOOR(sep1/deltax)
   SpacX2 = FLOOR(sep2/deltax)
@@ -456,9 +464,87 @@ subroutine InitializeFlow()
   
   
   
-  do ii=0,Ny-1
+  ! Do not consider the boundaries (walls)
+  ! Initialize everything
+  InDom1Up= .false.
+  InDom1Do= .false.
+  InDom2Up= .false.
+  InDom2Do= .false.
+
+  InDom1 = .false.
+  InDom2 = .false.
+
+  SpacY1Do = -1
+  SpacY2Do = -1
+  SpacY1rDo = 0.0d0
+  SpacY2rDo = 0.0d0
+
+  SpacY1Up = -1
+  SpacY2Up = -1
+  SpacY1rUp = 0.0d0
+  SpacY2rUp = 0.0d0
+
+  do ii = 1, Ny-1  ! Skip walls
+      ! Downward target positions (y decreases downward, so we subtract)
+      y_target1 = y(ii) - sep1
+      y_target2 = y(ii) - sep2
+      
+      ! Search for y_target1 in grid
+      do jj = ii, Ny-1  ! move downward (increasing jj)
+        if ((y(jj) >= y_target1) .and. (y(jj+1) <= y_target1)) then
+          SpacY1Do(ii) = jj - ii
+          SpacY1rDo(ii) = DABS((y_target1 - y(jj)) / (y(jj+1) - y(jj)))
+          InDom1Do(ii) = .true.
+          exit
+        endif
+      end do
+      
+      ! Same for sep2
+      do jj = ii, Ny-1
+        if ((y(jj) >= y_target2) .and. (y(jj+1) <= y_target2)) then
+          SpacY2Do(ii) = jj - ii
+          SpacY2rDo(ii) = DABS((y_target2 - y(jj)) / (y(jj+1) - y(jj)))
+          InDom2Do(ii) = .true.
+          exit
+        endif
+      end do    
+     
+         
+     ! Upward target positions (physically upward means +sep, index decreases)
+     y_target1 = y(ii) + sep1
+     y_target2 = y(ii) + sep2
+  
+     ! Search for y_target1 in grid (moving upward: decreasing jj)
+     do jj = ii, 1, -1
+        if (jj > 0) then
+          if ((y(jj) <= y_target1) .and. (y_target1 <= y(jj-1))) then
+            SpacY1Up(ii) = jj - ii
+            SpacY1rUp(ii) = DABS((y_target1 - y(jj)) / (y(jj-1) - y(jj)))
+            InDom1Up(ii) = .true.
+            exit
+          end if
+        end if
+      end do
+
     
+     ! Same for y_target2
+      do jj = ii, 1, -1
+        if (jj > 0) then
+          if ((y(jj) <= y_target2) .and. (y_target2 <= y(jj-1))) then
+            SpacY2Up(ii) = jj - ii
+            SpacY2rUp(ii) = DABS((y_target2 - y(jj)) / (y(jj-1) - y(jj)))
+            InDom2Up(ii) = .true.
+            exit
+          end if
+        end if
+      end do
   end do
+
+  do ii = 1, Ny-1
+    InDom1(ii) = InDom1Up(ii) .and. InDom1Do(ii)
+    InDom2(ii) = InDom2Up(ii) .and. InDom2Do(ii)
+  end do
+
 
 
 

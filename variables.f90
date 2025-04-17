@@ -158,6 +158,9 @@ real(kind=prec),allocatable,dimension(:):: SpacY1rDo
 real(kind=prec),allocatable,dimension(:):: SpacY2rUp
 real(kind=prec),allocatable,dimension(:):: SpacY2rDo
 
+logical(kind=prec),allocatable,dimension(:):: InDom1Up, InDom2Up, InDom1Do, InDom2Do
+logical(kind=prec),allocatable,dimension(:):: InDom1, InDom2
+
 
 
 

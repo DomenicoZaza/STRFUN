@@ -67,44 +67,121 @@ deallocate(tempr1)
 return
 end subroutine
 !***********************************************************************
-!***********************************************************************
 subroutine EvalSquaredVelIncrementsNormal()
-    ! Compute the velocity increments squared in the three directions
-    ! these are normal to the chosen direction
-    implicit none 
-    integer(kind=prec):: ii,jj,ll,hhLef,hhRig
-    real(kind=prec):: deltuxL,deltuyL,deltuzL
-    real(kind=prec):: deltuxLfwd,deltuxLbwd
+  implicit none
+  integer(kind=prec) :: ii,jj,ll
+  integer(kind=prec) :: ip1,jp1,lp1,ip2,jp2,lp2
+  integer(kind=prec) :: im1,jm1,lm1,im2,jm2,lm2
+  real(kind=prec) :: du(3), rhat(3), inc2
+  real(kind=prec) :: uref(3), uplus(3), uminus(3)
+  logical :: valid_plus, valid_minus
 
-    !....Compute velocity increments 
-    ! in streamwise (x)
-    do ll=0,Nzloc-1
-      do jj=0,Nx-1
-        do ii=0,Ny
-            
-         !....First Separation
-            !...Indices of the separated point 
-            hhLef = jj + SpacX1
-            hhRig = jj + SpacX1 + 1 
+  do ll=0,Nzloc-1
+    do jj=0,Nx-1
+      do ii=1,Ny-1
 
-            
+        ! Reference velocity
+        uref(1) = u0(ii,jj,ll)
+        uref(2) = v0(ii,jj,ll)
+        uref(3) = w0(ii,jj,ll)
 
 
-            ! deltuxLfwd = 
 
-         !....Second Separation
+        ! First Separation
+        if(InDom1(ii))then
+          ! Vel increment in x
+          jp1 = MOD(jj + SpacX1, Nx)
+          jp2 = MOD(jp1 + 1, Nx)
 
-            
+         ! Linear interpolation in +x
+          uplus(1) = (1.0d0 - SpacX1r) * u0(ii,jp1,ll) + SpacX1r * u0(ii,jp2,ll)
+          uplus(2) = (1.0d0 - SpacX1r) * v0(ii,jp1,ll) + SpacX1r * v0(ii,jp2,ll)
+          uplus(3) = (1.0d0 - SpacX1r) * w0(ii,jp1,ll) + SpacX1r * w0(ii,jp2,ll)
+  
+          ! Compute velocity increment
+          du = uplus - uref
+  
+          ! Project perpendicular to x-direction (1,0,0)
+          inc2 = du(2)**2 + du(3)**2
 
-        end do
+          ! Vel increment in x
+          jm1 = MODULO(jj - SpacX1, Nx) 
+          jm2 = MODULO(jm1 - 1, Nx)
+
+
+          ! Interpolate in -x direction
+          uminus(1) = (1.0d0 - SpacX1r) * u0(ii,jm1,ll) + SpacX1r * u0(ii,jm2,ll)
+          uminus(2) = (1.0d0 - SpacX1r) * v0(ii,jm1,ll) + SpacX1r * v0(ii,jm2,ll)
+          uminus(3) = (1.0d0 - SpacX1r) * w0(ii,jm1,ll) + SpacX1r * w0(ii,jm2,ll)
+
+          ! Compute increment
+          du(1) = uminus(1) - uref(1)
+          du(2) = uminus(2) - uref(2)
+          du(3) = uminus(3) - uref(3)
+
+          ! Project normal to -x direction → keep y and z
+          inc2 = du(2)**2 + du(3)**2
+
+           ! Accumulate
+           call AccumulateStructFun(inc2, 1, 2)  ! e.g., sep_idx = 1, dir_idx = 2 = -x
+
+        end if
+
+
+        ! jp1 = jj + SpacX1
+        ! jp2 = jp1 +1 
+        ! jm1 = jj - SpacX1
+        ! jm2 = jm1 - 1
+
+
+
+
+
+      
+
       end do
     end do
+  end do
+
+end subroutine
+!***********************************************************************
+! subroutine EvalSquaredVelIncrementsNormal()
+!     ! Compute the velocity increments squared in the three directions
+!     ! these are normal to the chosen direction
+!     implicit none 
+!     integer(kind=prec):: ii,jj,ll,hhLef,hhRig
+!     real(kind=prec):: deltuxL,deltuyL,deltuzL
+!     real(kind=prec):: deltuxLfwd,deltuxLbwd
+
+!     !....Compute velocity increments 
+!     ! in streamwise (x)
+!     do ll=0,Nzloc-1
+!       do jj=0,Nx-1
+!         do ii=0,Ny
+            
+!          !....First Separation
+!             !...Indices of the separated point 
+!             hhLef = jj + SpacX1
+!             hhRig = jj + SpacX1 + 1 
+
             
 
 
-    return
-end subroutine
-!***********************************************************************
+!             ! deltuxLfwd = 
+
+!          !....Second Separation
+
+            
+
+!         end do
+!       end do
+!     end do
+            
+
+
+!     return
+! end subroutine
+! !***********************************************************************
 subroutine DissipationTerm(Disspdmy,uhatdmy,vhatdmy,whatdmy)
 implicit none
 real(kind=prec)::Disspdmy(0:Ny,0:Nx-1,0:Nzloc-1) 
