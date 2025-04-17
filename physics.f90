@@ -1,7 +1,7 @@
-module physicspost
+module physics
 use mpi
-use parameterspost
-use transformspost
+use parameters
+use transforms
 
 implicit none
 
@@ -66,104 +66,45 @@ deallocate(tempr1)
 
 return
 end subroutine
-
 !***********************************************************************
 !***********************************************************************
-! subroutine ConvectiveStressSc(ConvSt,ConvStSc,u,v,w,Theta)
-! implicit none 
-! complex(kind=prec)::ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,1:6)
-! complex(kind=prec)::ConvStSc(0:Ny,0:Nx-1,0:Nzloc-1,1:4)
-! real(kind=prec)::u(0:Ny,0:Nx-1,0:Nzloc-1)
-! real(kind=prec)::v(0:Ny,0:Nx-1,0:Nzloc-1)
-! real(kind=prec)::w(0:Ny,0:Nx-1,0:Nzloc-1)
-! real(kind=prec)::Theta(0:Ny,0:Nx-1,0:Nzloc-1)
-! integer::ii,jj,ll
-! real(kind=prec),allocatable,dimension(:,:,:):: tempr1
-! complex(kind=prec),allocatable,dimension(:,:,:):: tempc1
+subroutine EvalSquaredVelIncrementsNormal()
+    ! compute the velocity increments squared in the three directions
+    ! these are normal to the chosen direction
+    implicit none 
+    integer(kind=prec):: ii,jj,ll,hhLef,hhRig
+    real(kind=prec):: deltuxL,deltuyL,deltuzL
+    real(kind=prec):: deltuxLfwd,deltuxLbwd
+
+    !....Compute velocity increments 
+    ! in streamwise (x) and spanwise direction (z)
+    do ll=0,Nzloc-1
+      do jj=0,Nx-1
+        do ii=0,Ny
+            
+         !....First Separation
+            !...Indices of the separated point 
+            hhLef = jj + SpacX1
+            hhRig = jj + SpacX1 + 1 
+
+            
 
 
-! allocate(tempr1(0:Ny,0:Nx-1,0:Nzloc-1))
-! allocate(tempc1(0:Ny,0:Nx-1,0:Nzloc-1))
+            ! deltuxLfwd = 
+
+         !....Second Separation
+
+            
+
+        end do
+      end do
+    end do
+            
 
 
-
-! !....uu
-! tempr1=u*u
-! call transform_rows(ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,1),tempr1)!(u*u)_hat
-
-! !....vv
-! tempr1=v*v
-! call transform_rows(ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,2),tempr1)!(v*v)_hat
-
-! !....ww
-! tempr1=w*w
-! call transform_rows(ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,3),tempr1)!(w*w)_hat
-
-! !....uv
-! tempr1=u*v
-! call transform_rows(ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,4),tempr1)!(u*v)_hat
-
-! !....uw
-! tempr1=u*w
-! call transform_rows(ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,5),tempr1)!(u*w)_hat
-
-
-! !....vw
-! tempr1=v*w
-! call transform_rows(ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,6),tempr1)!(v*w)_hat
-
-
-
-! tempr1=Theta(0:Ny,0:Nx-1,0:Nzloc-1)*u
-! call transform_rows(ConvStSc(0:Ny,0:Nx-1,0:Nzloc-1,1),tempr1)
-
-! tempr1=Theta(0:Ny,0:Nx-1,0:Nzloc-1)*v
-! call transform_rows(ConvStSc(0:Ny,0:Nx-1,0:Nzloc-1,2),tempr1)
-
-! tempr1=Theta(0:Ny,0:Nx-1,0:Nzloc-1)*w
-! call transform_rows(ConvStSc(0:Ny,0:Nx-1,0:Nzloc-1,3),tempr1)
-
-! tempr1=Theta(0:Ny,0:Nx-1,0:Nzloc-1)*Theta(0:Ny,0:Nx-1,0:Nzloc-1)
-! call transform_rows(ConvStSc(0:Ny,0:Nx-1,0:Nzloc-1,4),tempr1)
-
-
-
-
-
-! !....dealiasing the convective stress
-! where(dealiasing) 
-! ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,1)=cpx0
-! ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,2)=cpx0
-! ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,3)=cpx0
-! ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,4)=cpx0
-! ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,5)=cpx0
-! ConvSt(0:Ny,0:Nx-1,0:Nzloc-1,6)=cpx0
-! end where
-
-
-! !...dealiasing convective stress for passive scalars
-! do jj=1,4
-
-
-! tempc1(0:Ny,0:Nx-1,0:Nzloc-1)=ConvStSc(0:Ny,0:Nx-1,0:Nzloc-1,jj)
-
-! where(dealiasing) 
-! tempc1(0:Ny,0:Nx-1,0:Nzloc-1)=cpx0
-! end where
-! ConvStSc(0:Ny,0:Nx-1,0:Nzloc-1,jj)=tempc1(0:Ny,0:Nx-1,0:Nzloc-1)
-
-
-! end do
-
-
-
-! deallocate(tempr1)
-! deallocate(tempc1)
-
-! return
-! end subroutine
-! !***********************************************************************
-! !***********************************************************************
+    return
+end subroutine
+!***********************************************************************
 subroutine DissipationTerm(Disspdmy,uhatdmy,vhatdmy,whatdmy)
 implicit none
 real(kind=prec)::Disspdmy(0:Ny,0:Nx-1,0:Nzloc-1) 
@@ -484,5 +425,5 @@ end subroutine
 !***********************************************************************
 !***********************************************************************
 
-end module physicspost
+end module physics
 

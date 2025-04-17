@@ -1,6 +1,6 @@
 !***********************************************************************
 !***********************************************************************
-module parameterspost
+module parameters
 
 use mpi
 
@@ -132,12 +132,28 @@ complex(kind=prec),allocatable, dimension(:)::uvhmean
 
 integer(kind=prec),allocatable,dimension(:)::nneven,nnodd
 
-end module parameterspost
+
+!...Separations over which to compute the velocity increments
+real(kind=prec):: sep1,sep2
+
+!....Some variables for Increments
+integer(kind=prec):: SpacX1
+integer(kind=prec):: SpacX2
+integer(kind=prec):: SpacZ1
+integer(kind=prec):: SpacZ2
+
+real(kind=prec):: SpacX1r
+real(kind=prec):: SpacX2r
+real(kind=prec):: SpacZ1r
+real(kind=prec):: SpacZ2r
+
+
+end module parameters
 !***********************************************************************
 !***********************************************************************
-module flowvariablespost
+module flowvariables
 use mpi 
-use parameterspost
+use parameters
 implicit none
 
 !....Fields in Physical Space
@@ -193,7 +209,15 @@ complex(kind=prec),allocatable, dimension(:,:,:,:)::ConvStrp1
 real(kind=prec),allocatable,dimension(:)::Ubulk,uumax
 
 
+! real(kind=prec),allocatable,dimension(:,:)::deltux,deltuy,deltuz
+! real(kind=prec),allocatable,dimension(:,:)::deltuxMT,deltuyMT,deltuzMT
 
-end module flowvariablespost
+real(kind=prec),allocatable,dimension(:,:,:)::deltux1,deltuy1,deltuz1
+real(kind=prec),allocatable,dimension(:,:,:)::deltux2,deltuy2,deltuz2
+
+
+
+
+end module flowvariables
 !***********************************************************************
 !***********************************************************************

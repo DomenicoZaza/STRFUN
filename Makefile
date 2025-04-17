@@ -38,23 +38,28 @@ INC = -I$(FFTW_INCLUDE) -I$(OPENBLAS_INCLUDE)
 
 
 #OBJECT FILES USED BY POST
-MODULES =  variablespost.o in_outpost.o transformspost.o physicspost.o solverspost.o  setuppost.o
+MODULES =  variables.o in_out.o transforms.o physics.o solvers.o  setup.o
 
 
 #MAIN OBJECT
-MAINOBJ = post.o
+MAINOBJ = strfun.o
 
 #EXECUTABLE
-POST:		$(MODULES) $(MAINOBJ);	 $(COMP) $(FLAG) -o POST.x $(MODULES) $(MAINOBJ) $(LINK_LIB) $(INC)
+POST:		$(MODULES) $(MAINOBJ);	 $(COMP) $(FLAG) -o STRFUN.x $(MODULES) $(MAINOBJ) $(LINK_LIB) $(INC)
 
 
 #COMPILE MODULES for POST
-variablespost.o:		variablespost.f90;		$(COMP) $(FLAG) -c -o variablespost.o variablespost.f90
-in_outpost.o:			in_outpost.f90;			$(COMP) $(FLAG) -c -o in_outpost.o in_outpost.f90
-transformspost.o:		transformspost.f90;		$(COMP) $(FLAG) -c -o transformspost.o transformspost.f90 $(LINK_LIB) $(INC)
-solverspost.o:			solverspost.f90;		$(COMP) $(FLAG) -c -o solverspost.o solverspost.f90
-physicspost.o:			physicspost.f90;		$(COMP) $(FLAG) -c -o physicspost.o physicspost.f90
-setuppost.o:			setuppost.f90;			$(COMP) $(FLAG) -c -o setuppost.o setuppost.f90
+variables.o:		variables.f90;		$(COMP) $(FLAG) -c -o variables.o variables.f90
+in_out.o:			in_out.f90;			$(COMP) $(FLAG) -c -o in_out.o in_out.f90
+transforms.o:		transforms.f90;		$(COMP) $(FLAG) -c -o transforms.o transforms.f90 $(LINK_LIB) $(INC)
+solvers.o:			solvers.f90;		$(COMP) $(FLAG) -c -o solvers.o solvers.f90
+physics.o:			physics.f90;		$(COMP) $(FLAG) -c -o physics.o physics.f90
+setup.o:			setup.f90;			$(COMP) $(FLAG) -c -o setup.o setup.f90
 
 #POST-PROCESSING: 
-post.o:		post.f90; 	$(COMP) $(FLAG) -c -o  post.o post.f90 $(LINK_LIB) $(INC)
+strfun.o:		strfun.f90; 	$(COMP) $(FLAG) -c -o  strfun.o strfun.f90 $(LINK_LIB) $(INC)
+
+# CLEAN
+clean:
+	rm -f *.o *.mod STRFUN.x
+
