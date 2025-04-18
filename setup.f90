@@ -121,6 +121,19 @@ allocate(InDom2Do(0:Ny))
 allocate(InDom1(0:Ny))
 allocate(InDom2(0:Ny))
 
+
+allocate(dux1(0:Ny,0:Nx-1,0:Nzloc-1))
+allocate(dux2(0:Ny,0:Nx-1,0:Nzloc-1))
+
+
+allocate(dux1MT(0:Ny,0:Nx-1,0:Nzloc-1))
+allocate(dux2MT(0:Ny,0:Nx-1,0:Nzloc-1))
+
+
+allocate(dux1MTY(0:Ny))
+allocate(dux2MTY(0:Ny))
+
+
 !!....Allocate Particles Variables
 !allocate(Part(1:PartInfo,1:Nplocmax))
 !allocate(PartBuffer(1:PartInfo,1:Nplocmax))
@@ -253,6 +266,21 @@ deallocate(InDom2Do)
 
 deallocate(InDom1)
 deallocate(InDom2)
+
+
+
+deallocate(dux1)
+deallocate(dux2)
+
+
+deallocate(dux1MT)
+deallocate(dux2MT)
+
+
+
+deallocate(dux1MTY)
+deallocate(dux2MTY)
+
 
 end subroutine
 !***********************************************************************
@@ -545,6 +573,12 @@ subroutine InitializeFlow()
     InDom2(ii) = InDom2Up(ii) .and. InDom2Do(ii)
   end do
 
+
+
+  dux1 = 0.0d0
+  dux2 = 0.0d0
+  dux1MT = 0.0d0
+  dux2MT = 0.0d0
 
 
 

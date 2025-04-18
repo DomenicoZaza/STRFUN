@@ -1,6 +1,7 @@
 module physics
 use mpi
 use parameters
+use flowvariables
 use transforms
 
 implicit none
@@ -72,7 +73,7 @@ subroutine EvalSquaredVelIncrementsNormal()
   integer(kind=prec) :: ii,jj,ll
   integer(kind=prec) :: ip1,jp1,lp1,ip2,jp2,lp2
   integer(kind=prec) :: im1,jm1,lm1,im2,jm2,lm2
-  real(kind=prec) :: du(3), rhat(3), inc2
+  real(kind=prec) :: du(3), rhat(3), incUp,incDo
   real(kind=prec) :: uref(3), uplus(3), uminus(3)
   logical :: valid_plus, valid_minus
 
@@ -80,7 +81,7 @@ subroutine EvalSquaredVelIncrementsNormal()
     do jj=0,Nx-1
       do ii=1,Ny-1
 
-        ! Reference velocity
+        ! Reference velocity (Center of the stencil)
         uref(1) = u0(ii,jj,ll)
         uref(2) = v0(ii,jj,ll)
         uref(3) = w0(ii,jj,ll)
@@ -89,7 +90,7 @@ subroutine EvalSquaredVelIncrementsNormal()
 
         ! First Separation
         if(InDom1(ii))then
-          ! Vel increment in x
+          ! Vel increment in +x
           jp1 = MOD(jj + SpacX1, Nx)
           jp2 = MOD(jp1 + 1, Nx)
 
@@ -102,9 +103,9 @@ subroutine EvalSquaredVelIncrementsNormal()
           du = uplus - uref
   
           ! Project perpendicular to x-direction (1,0,0)
-          inc2 = du(2)**2 + du(3)**2
+          incUp = du(2)**2 + du(3)**2
 
-          ! Vel increment in x
+          ! Vel increment in -x
           jm1 = MODULO(jj - SpacX1, Nx) 
           jm2 = MODULO(jm1 - 1, Nx)
 
@@ -120,23 +121,54 @@ subroutine EvalSquaredVelIncrementsNormal()
           du(3) = uminus(3) - uref(3)
 
           ! Project normal to -x direction → keep y and z
-          inc2 = du(2)**2 + du(3)**2
+          incDo = du(2)**2 + du(3)**2
 
-           ! Accumulate
-           call AccumulateStructFun(inc2, 1, 2)  ! e.g., sep_idx = 1, dir_idx = 2 = -x
+
+          dux1(ii,jj,ll) = 0.5d0 * (incUp + incDo)
+
 
         end if
 
+                ! First Separation
+        if(InDom2(ii))then
+          ! Vel increment in +x
+          jp1 = MOD(jj + SpacX2, Nx)
+          jp2 = MOD(jp1 + 1, Nx)
 
-        ! jp1 = jj + SpacX1
-        ! jp2 = jp1 +1 
-        ! jm1 = jj - SpacX1
-        ! jm2 = jm1 - 1
+         ! Linear interpolation in +x
+          uplus(1) = (1.0d0 - SpacX2r) * u0(ii,jp1,ll) + SpacX2r * u0(ii,jp2,ll)
+          uplus(2) = (1.0d0 - SpacX2r) * v0(ii,jp1,ll) + SpacX2r * v0(ii,jp2,ll)
+          uplus(3) = (1.0d0 - SpacX2r) * w0(ii,jp1,ll) + SpacX2r * w0(ii,jp2,ll)
+  
+          ! Compute velocity increment
+          du = uplus - uref
+  
+          ! Project perpendicular to x-direction (1,0,0)
+          incUp = du(2)**2 + du(3)**2
+
+          ! Vel increment in -x
+          jm1 = MODULO(jj - SpacX2, Nx) 
+          jm2 = MODULO(jm1 - 1, Nx)
 
 
+          ! Interpolate in -x direction
+          uminus(1) = (1.0d0 - SpacX2r) * u0(ii,jm1,ll) + SpacX2r * u0(ii,jm2,ll)
+          uminus(2) = (1.0d0 - SpacX2r) * v0(ii,jm1,ll) + SpacX2r * v0(ii,jm2,ll)
+          uminus(3) = (1.0d0 - SpacX2r) * w0(ii,jm1,ll) + SpacX2r * w0(ii,jm2,ll)
+
+          ! Compute increment
+          du(1) = uminus(1) - uref(1)
+          du(2) = uminus(2) - uref(2)
+          du(3) = uminus(3) - uref(3)
+
+          ! Project normal to -x direction → keep y and z
+          incDo = du(2)**2 + du(3)**2
 
 
+          dux2(ii,jj,ll) = 0.5d0 * (incUp + incDo)
 
+
+        end if
       
 
       end do
@@ -306,42 +338,84 @@ deallocate(tempr)
 return
 end subroutine
 !***********************************************************************
+! !***********************************************************************
+! subroutine MeanXZ(averval,Sfield)
+! implicit none
+! real(kind=prec)::averval(0:Ny) 
+! real(kind=prec)::Sfield(0:Ny,0:Nx-1,0:Nzloc-1) 
+! complex(kind=prec),allocatable,dimension(:,:,:)::tempcp1,tempcp2
+! real(kind=prec),allocatable,dimension(:,:,:)::tempr
+
+! allocate(tempcp1(0:Ny,0:Nx-1,0:Nzloc-1))
+! allocate(tempcp2(0:Ny,0:Nx-1,0:Nzloc-1))
+! allocate(tempr(0:Ny,0:Nx-1,0:Nzloc-1))
+
+! averval=0.0d0
+! tempr=0.0d0
+! tempcp2=cpx0
+
+
+! call transform_rows_batched(tempcp1,Sfield)
+
+! if(nid.eq.0)then
+! tempcp2(0:Ny,0,0)=tempcp1(0:Ny,0,0)
+! end if
+
+! call transformInv_rows_batched(tempr,tempcp2)
+
+
+! averval(0:Ny)=tempr(0:Ny,0,0)
+
+
+
+
+! deallocate(tempcp1)
+! deallocate(tempcp2)
+! deallocate(tempr)
+
+! return
+! end subroutine
+! !***********************************************************************
 !***********************************************************************
-subroutine MeanXZ(averval,Sfield)
-implicit none
-real(kind=prec)::averval(0:Ny) 
-real(kind=prec)::Sfield(0:Ny,0:Nx-1,0:Nzloc-1) 
-complex(kind=prec),allocatable,dimension(:,:,:)::tempcp1,tempcp2
-real(kind=prec),allocatable,dimension(:,:,:)::tempr
-
-allocate(tempcp1(0:Ny,0:Nx-1,0:Nzloc-1))
-allocate(tempcp2(0:Ny,0:Nx-1,0:Nzloc-1))
-allocate(tempr(0:Ny,0:Nx-1,0:Nzloc-1))
-
-averval=0.0d0
-tempr=0.0d0
-tempcp2=cpx0
-
-
-call transform_rows_batched(tempcp1,Sfield)
-
-if(nid.eq.0)then
-tempcp2(0:Ny,0,0)=tempcp1(0:Ny,0,0)
-end if
-
-call transformInv_rows_batched(tempr,tempcp2)
-
-
-averval(0:Ny)=tempr(0:Ny,0,0)
+subroutine MeanInXZ(SF,media)
+  implicit none 
+  !SF is a scalar field in physical space (input)
+  !media is the mean value in XZ
+  real(kind=prec)::SF(0:Ny,0:Nx-1,0:Nzloc-1)
+  real(kind=prec)::media(0:Ny)
+  real(kind=prec),allocatable,dimension(:)::SSloc
+  real(kind=prec),allocatable,dimension(:)::SSglob
+  integer(kind=prec)::size1
+  integer(kind=prec)::ii
 
 
 
+  allocate(SSloc(0:Ny))
+  allocate(SSglob(0:Ny))
 
-deallocate(tempcp1)
-deallocate(tempcp2)
-deallocate(tempr)
 
-return
+  !...Dimension
+  size1=(Nx*Nz)
+
+  !....Azzero la Sommatoria Locale 
+  SSloc=0.0d0
+  SSglob=0.0d0
+  !....Calcolo la sommatoria LOCALE
+  do ii=0,Ny
+  SSloc(ii)=SUM(SF(ii,0:Nx-1,0:Nzloc-1))
+  end do
+
+
+  call MPI_Allreduce(SSloc(0),SSglob(0),int(Ny+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_Comm_World,ierror)
+
+  !...Compute the Root Mean Square
+  media(0:Ny)=(SSglob(0:Ny)/dfloat(size1))
+
+
+  deallocate(SSloc)
+  deallocate(SSglob)
+
+  return
 end subroutine
 !***********************************************************************
 !***********************************************************************
