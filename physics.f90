@@ -116,21 +116,60 @@ subroutine EvalSquaredVelIncrementsNormal()
           uminus(3) = (1.0d0 - SpacX1r) * w0(ii,jm1,ll) + SpacX1r * w0(ii,jm2,ll)
 
           ! Compute increment
-          du(1) = uminus(1) - uref(1)
-          du(2) = uminus(2) - uref(2)
-          du(3) = uminus(3) - uref(3)
-
-          ! Project normal to -x direction → keep y and z
+          du = uminus - uref
+          ! Project normal to -x direction -> keep y and z
           incDo = du(2)**2 + du(3)**2
 
 
           dux1(ii,jj,ll) = 0.5d0 * (incUp + incDo)
 
 
+
+          ! Vel increment in +y
+          ip1 = ii + SpacY1Up(ii)
+          ip2 = ip1 - 1
+
+          ! Linear interpolation in +y (wall-normal direction)
+          uplus(1) = (1.0d0 - SpacY1rUp(ii)) * u0(ip1,jj,ll) + SpacY1rUp(ii) * u0(ip2,jj,ll)
+          uplus(2) = (1.0d0 - SpacY1rUp(ii)) * v0(ip1,jj,ll) + SpacY1rUp(ii) * v0(ip2,jj,ll)
+          uplus(3) = (1.0d0 - SpacY1rUp(ii)) * w0(ip1,jj,ll) + SpacY1rUp(ii) * w0(ip2,jj,ll)
+          
+
+          ! Compute velocity increment
+          du = uplus - uref
+
+          ! Project perpendicular to y-direction -> remove y component (du(2))
+          incUp = du(1)**2 + du(3)**2
+
+
+          ! Vel increment in -y
+          ip1 = ii + SpacY1Do(ii)      ! first point below current
+          ip2 = ip1 + 1                ! next point even further downward
+
+          ! Linear interpolation in -y (wall-normal direction)
+          uminus(1) = (1.0d0 - SpacY1rDo(ii)) * u0(ip1,jj,ll) + SpacY1rDo(ii) * u0(ip2,jj,ll)
+          uminus(2) = (1.0d0 - SpacY1rDo(ii)) * v0(ip1,jj,ll) + SpacY1rDo(ii) * v0(ip2,jj,ll)
+          uminus(3) = (1.0d0 - SpacY1rDo(ii)) * w0(ip1,jj,ll) + SpacY1rDo(ii) * w0(ip2,jj,ll)
+
+          ! Compute velocity increment
+          du = uminus - uref
+
+          ! Project perpendicular to y-direction -> remove y component (du(2))
+          incDo = du(1)**2 + du(3)**2
+
+          duy1(ii,jj,ll) = 0.5d0 * (incUp + incDo)
+
+          
+
+
+
+
+
         end if
 
-                ! First Separation
+        ! Second Separation
         if(InDom2(ii))then
+
           ! Vel increment in +x
           jp1 = MOD(jj + SpacX2, Nx)
           jp2 = MOD(jp1 + 1, Nx)
@@ -157,15 +196,51 @@ subroutine EvalSquaredVelIncrementsNormal()
           uminus(3) = (1.0d0 - SpacX2r) * w0(ii,jm1,ll) + SpacX2r * w0(ii,jm2,ll)
 
           ! Compute increment
-          du(1) = uminus(1) - uref(1)
-          du(2) = uminus(2) - uref(2)
-          du(3) = uminus(3) - uref(3)
+          du = uminus - uref
 
           ! Project normal to -x direction → keep y and z
           incDo = du(2)**2 + du(3)**2
 
 
           dux2(ii,jj,ll) = 0.5d0 * (incUp + incDo)
+
+
+          
+          ! Vel increment in +y
+          ip1 = ii + SpacY2Up(ii)
+          ip2 = ip1 - 1
+
+          ! Linear interpolation in +y (wall-normal direction)
+          uplus(1) = (1.0d0 - SpacY2rUp(ii)) * u0(ip1,jj,ll) + SpacY2rUp(ii) * u0(ip2,jj,ll)
+          uplus(2) = (1.0d0 - SpacY2rUp(ii)) * v0(ip1,jj,ll) + SpacY2rUp(ii) * v0(ip2,jj,ll)
+          uplus(3) = (1.0d0 - SpacY2rUp(ii)) * w0(ip1,jj,ll) + SpacY2rUp(ii) * w0(ip2,jj,ll)
+          
+
+          ! Compute velocity increment
+          du = uplus - uref
+
+          ! Project perpendicular to y-direction -> remove y component (du(2))
+          incUp = du(1)**2 + du(3)**2
+
+
+          ! Vel increment in -y
+          ip1 = ii + SpacY2Do(ii)      ! first point below current
+          ip2 = ip1 + 1                ! next point even further downward
+
+          ! Linear interpolation in -y (wall-normal direction)
+          uminus(1) = (1.0d0 - SpacY2rDo(ii)) * u0(ip1,jj,ll) + SpacY2rDo(ii) * u0(ip2,jj,ll)
+          uminus(2) = (1.0d0 - SpacY2rDo(ii)) * v0(ip1,jj,ll) + SpacY2rDo(ii) * v0(ip2,jj,ll)
+          uminus(3) = (1.0d0 - SpacY2rDo(ii)) * w0(ip1,jj,ll) + SpacY2rDo(ii) * w0(ip2,jj,ll)
+
+          ! Compute velocity increment
+          du = uminus - uref
+
+          ! Project perpendicular to y-direction -> remove y component (du(2))
+          incDo = du(1)**2 + du(3)**2
+
+          duy2(ii,jj,ll) = 0.5d0 * (incUp + incDo)
+
+          
 
 
         end if

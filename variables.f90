@@ -234,8 +234,11 @@ real(kind=prec),allocatable,dimension(:,:,:)::deltux2,deltuy2,deltuz2
 
 
 real(kind=prec),allocatable,dimension(:,:,:)::dux1,dux2
+real(kind=prec),allocatable,dimension(:,:,:)::duy1,duy2
 real(kind=prec),allocatable,dimension(:,:,:)::dux1MT,dux2MT
+real(kind=prec),allocatable,dimension(:,:,:)::duy1MT,duy2MT
 real(kind=prec),allocatable,dimension(:)::dux1MTY,dux2MTY
+real(kind=prec),allocatable,dimension(:)::duy1MTY,duy2MTY
 
 
 

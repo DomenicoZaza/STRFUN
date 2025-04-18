@@ -92,21 +92,8 @@ call EvalSquaredVelIncrementsNormal()
 
 dux1MT = dux1/2.0d0
 dux2MT = dux2/2.0d0
-
-
-
-
-! !....Transorm to Fourier Space
-! call transform_rows_batched(uhat,u0(0:Ny,0:Nx-1,0:Nzloc-1))
-! call transform_rows_batched(vhat,v0(0:Ny,0:Nx-1,0:Nzloc-1))
-! call transform_rows_batched(what,w0(0:Ny,0:Nx-1,0:Nzloc-1))
-
-
-! call EvalUbulk(Ubulk(1),uhat(0:Ny,0,0))
-
-! uhatMT=uhat/2.0d0
-! vhatMT=vhat/2.0d0
-! whatMT=what/2.0d0
+duy1MT = duy1/2.0d0
+duy2MT = duy2/2.0d0
 
 
 call MPI_BARRIER(MPI_Comm_World,ierror) 
@@ -139,26 +126,12 @@ call EvalSquaredVelIncrementsNormal()
 
 dux1MT = dux1MT + dux1
 dux2MT = dux2MT + dux2
+duy1MT = duy1MT + duy1
+duy2MT = duy2MT + duy2
 
 
-
-! !....Transorm to Fourier Space
-! call transform_rows_batched(uhat,u0(0:Ny,0:Nx-1,0:Nzloc-1))
-! call transform_rows_batched(vhat,v0(0:Ny,0:Nx-1,0:Nzloc-1))
-! call transform_rows_batched(what,w0(0:Ny,0:Nx-1,0:Nzloc-1))
-
-
-
-! uhatMT=uhatMT+uhat
-! vhatMT=vhatMT+vhat
-! whatMT=whatMT+what
-
-
-! call EvalUbulk(Ubulk(Iext),uhat(0:Ny,0,0))
 
 call MPI_BARRIER(MPI_Comm_World,ierror) 
-
-
 
 
 end do
@@ -192,18 +165,23 @@ call EvalSquaredVelIncrementsNormal()
 
 dux1MT = dux1MT + dux1/2.0d0
 dux2MT = dux2MT + dux2/2.0d0
-
+duy1MT = duy1MT + duy1/2.0d0
+duy2MT = duy2MT + duy2/2.0d0
 
 
 dux1MT = dux1MT / Ninterv
 dux2MT = dux2MT / Ninterv
+duy1MT = duy1MT / Ninterv
+duy2MT = duy2MT / Ninterv
 
 call MPI_BARRIER(MPI_Comm_World,ierror) 
 
 
 !Average om wall-parallel planes
 call MeanInXZ(dux1MT(0:Ny,0:Nx-1,0:Nzloc-1),dux1MTY(0:Ny))
-call MeanInXZ(dux1MT(0:Ny,0:Nx-1,0:Nzloc-1),dux2MTY(0:Ny))
+call MeanInXZ(dux2MT(0:Ny,0:Nx-1,0:Nzloc-1),dux2MTY(0:Ny))
+call MeanInXZ(duy1MT(0:Ny,0:Nx-1,0:Nzloc-1),duy1MTY(0:Ny))
+call MeanInXZ(duy2MT(0:Ny,0:Nx-1,0:Nzloc-1),duy2MTY(0:Ny))
 !call EvalUbulk(Ubulk(Nsavings),uhat(0:Ny,0,0))
 
 call MPI_BARRIER(MPI_Comm_World,ierror) 
@@ -218,7 +196,7 @@ WRITE(*,*)'Saving the mean profiles...'
 WRITE(*,*)
 end if
 
-resfile(1)='VIncr_X.bin'
+resfile(1)='VIncr_X.txt'
 ! resfile(2)='v_mean.bin'
 ! resfile(3)='w_mean.bin'
 
@@ -226,13 +204,13 @@ resfile(1)='VIncr_X.bin'
 call MPI_BARRIER(MPI_Comm_World,ierror) 
 
 
-FMT1="(2X,E12.5,2X,E12.5,2X,E12.5,2X,E12.5)"
+FMT1="(2X,E12.5,2X,E12.5,2X,E12.5,2X,E12.5,2X,E12.5,2X,E12.5)"
 
 if(nid.eq.0)then
 open(2,file=resfile(1))
-write(2,*) '%       y        y+      du_normal_x_sep1      du_normal_x_sep2      '
+write(2,*) '%       y        y+      du_normal_x_sep1     du_normal_y_sep1      du_normal_x_sep2      du_normal_y_sep2     '
 do ii=0,Ny
-write(2,FMT1) y(Ny-ii),yp(ii),dux1MTY(Ny-ii),dux2MTY(Ny-ii) 
+write(2,FMT1) y(Ny-ii),yp(ii),dux1MTY(Ny-ii),duy1MTY(Ny-ii),dux2MTY(Ny-ii),duy2MTY(Ny-ii) 
 end do
 
 close(2)
